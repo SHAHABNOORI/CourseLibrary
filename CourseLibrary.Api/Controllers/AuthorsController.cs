@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using AutoMapper;
-using CourseLibrary.API.Helpers;
+using CourseLibrary.API.Entities;
 using CourseLibrary.API.Models;
 using CourseLibrary.API.ResourceParameters;
 using CourseLibrary.API.Services;
@@ -39,10 +38,10 @@ namespace CourseLibrary.API.Controllers
             //    Age = author.DateOfBirth.GetCurrentAge()
             //}).ToList();
             return Ok(_mapper.Map<IEnumerable<AuthorDto>>(autorsFromRepo));
-        }   
+        }
 
         //[HttpGet("{authorId:guid{")]
-        [HttpGet("{authorId}")]
+        [HttpGet("{authorId}", Name = "GetAuthor")]
         public IActionResult GetAuthor(Guid authorId)
         {
             //if (!_courseLibraryRepository.AuthorExists(authorId))
@@ -51,6 +50,26 @@ namespace CourseLibrary.API.Controllers
             var autorFromRepo = _courseLibraryRepository.GetAuthor(authorId);
             return autorFromRepo == null ? (IActionResult)NotFound() : Ok(_mapper.Map<AuthorDto>(autorFromRepo));
             //return autorsFromRepo == null ? (IActionResult)NotFound() : Ok(autorsFromRepo);
+        }
+
+        [HttpPost]
+        public ActionResult<AuthorDto> CreateAuthor(AuthorForCreationDto author)
+        {
+            //if (author == null)
+            //    return BadRequest();
+
+            var authorEntity = _mapper.Map<Author>(author);
+            _courseLibraryRepository.AddAuthor(authorEntity);
+            _courseLibraryRepository.Save();
+            var authorToReturn = _mapper.Map<AuthorDto>(authorEntity);
+            return CreatedAtRoute("GetAuthor", new {authorId = authorToReturn.Id}, authorToReturn);
+        }
+
+        [HttpOptions]
+        public IActionResult GetAuthorsOptions()
+        {
+            Response.Headers.Add("Allow","GET,OPTIONS,POST");
+            return Ok();
         }
     }
 }

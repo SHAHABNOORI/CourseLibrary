@@ -37,7 +37,8 @@ namespace CourseLibrary.API
             services.AddDbContext<CourseLibraryContext>(options =>
             {
                 options.UseSqlServer(
-                    @"Server=DESKTOP-VQ808VA;Database=CourseLibraryDB;user id=sa;password=P@ssw0rdM@n;MultipleActiveResultSets=True;");
+                    @"Server=SHL-34;Database=CourseLibraryDB;user id=sa;password=P@ssw0rdM@n;MultipleActiveResultSets=True;");
+                    //@"Server=DESKTOP-VQ808VA;Database=CourseLibraryDB;user id=sa;password=P@ssw0rdM@n;MultipleActiveResultSets=True;");
             });
         }
 
