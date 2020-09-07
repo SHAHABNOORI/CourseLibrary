@@ -1,10 +1,13 @@
 using System;
+using System.Net.Mime;
 using AutoMapper;
 using CourseLibrary.API.DbContexts;
 using CourseLibrary.API.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,7 +31,51 @@ namespace CourseLibrary.API
             {
                 setupAction.ReturnHttpNotAcceptable = true;
                 //setupAction.OutputFormatters.Add(new XmlDataContractSerializerOutputFormatter());
-            }).AddXmlDataContractSerializerFormatters();
+            }).AddXmlDataContractSerializerFormatters()
+                .ConfigureApiBehaviorOptions(setupAction =>
+                {
+                    setupAction.InvalidModelStateResponseFactory = context =>
+                    {
+                        var problemDetailsFactory =
+                            context.HttpContext.RequestServices.GetRequiredService<ProblemDetailsFactory>();
+
+                        var problemDetails =
+                            problemDetailsFactory.CreateValidationProblemDetails(context.HttpContext,
+                                context.ModelState);
+
+                        // add additional info not added by default
+                        problemDetails.Detail = "See the errors field for details";
+                        problemDetails.Instance = context.HttpContext.Request.Path;
+
+                        // find out which status code to use
+                        var actionExecutingContext = context as Microsoft.AspNetCore.Mvc.Filters.ActionExecutingContext;
+
+                        // if there are model state errors and all arguments were correctly
+                        // found / parsed we're dealing with validation errors
+                        if ((context.ModelState.ErrorCount > 0) &&
+                            (actionExecutingContext?.ActionArguments.Count ==
+                             context.ActionDescriptor.Parameters.Count))
+                        {
+                            problemDetails.Type = "https://courselibrary.com/modelvalidationproblem";
+                            problemDetails.Status = StatusCodes.Status422UnprocessableEntity;
+                            problemDetails.Title = "One ore more validation error occured";
+
+                            return new UnprocessableEntityObjectResult(problemDetails)
+                            {
+                                ContentTypes = { "application/problem+json" }
+                            };
+                        }
+
+                        // if one of the arguments wasn't correctly found / couldn't be parsed
+                        // we're dealing with null/unparesable input
+                        problemDetails.Status = StatusCodes.Status400BadRequest;
+                        problemDetails.Title = "One ore more validation error occured";
+                        return new UnprocessableEntityObjectResult(problemDetails)
+                        {
+                            ContentTypes = { "application/problem+json" }
+                        };
+                    };
+                });
 
             services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
@@ -38,7 +85,7 @@ namespace CourseLibrary.API
             {
                 options.UseSqlServer(
                     @"Server=SHL-34;Database=CourseLibraryDB;user id=sa;password=P@ssw0rdM@n;MultipleActiveResultSets=True;");
-                    //@"Server=DESKTOP-VQ808VA;Database=CourseLibraryDB;user id=sa;password=P@ssw0rdM@n;MultipleActiveResultSets=True;");
+                //@"Server=DESKTOP-VQ808VA;Database=CourseLibraryDB;user id=sa;password=P@ssw0rdM@n;MultipleActiveResultSets=True;");
             });
         }
 
