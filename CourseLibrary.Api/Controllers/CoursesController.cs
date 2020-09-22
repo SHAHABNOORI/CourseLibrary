@@ -44,7 +44,6 @@ namespace CourseLibrary.API.Controllers
                 : Ok(_mapper.Map<CourseDto>(courseForAuthorFromRepo));
         }
 
-
         [HttpPost]
         public ActionResult<CourseDto> CreateCourseForAuthor(Guid authorId, CourseForCreationDto course)
         {
@@ -60,5 +59,42 @@ namespace CourseLibrary.API.Controllers
             return CreatedAtRoute("GetCourseForAuthor", new { authorId = authorId, courseId = courseToReturn.Id },
                 courseToReturn);
         }
+
+        [HttpPut("{courseId}")]
+        public IActionResult UpdateCourseForAuthor(Guid authorId, Guid courseId, CourseForUpdateDto course)
+        {
+            if (!_courseLibraryRepository.AuthorExists(authorId))
+                return NotFound();
+
+            var courseForAuthorFromRepo = _courseLibraryRepository.GetCourse(authorId, courseId);
+
+            // For Upserting
+            if (courseForAuthorFromRepo == null)
+            {
+                //return NotFound();
+                var courseToAdd = _mapper.Map<Course>(course);
+                courseToAdd.Id = courseId;
+                _courseLibraryRepository.AddCourse(authorId, courseToAdd);
+                _courseLibraryRepository.Save();
+
+                //we should send 200
+
+                var courseToReturn = _mapper.Map<CourseDto>(courseToAdd);
+                return CreatedAtRoute("GetCourseForAuthor",
+                    new {/*authorId =*/ authorId, courseId = courseToReturn.Id},
+                    courseToReturn);
+            }
+
+            // map the entity to a CourseForUpdateDto
+            // apply the updated field values to that dto 
+            // map the CourseForUpdateDto back to an entity
+            _mapper.Map(course, courseForAuthorFromRepo);
+            _courseLibraryRepository.UpdateCourse(courseForAuthorFromRepo);
+            _courseLibraryRepository.Save();
+
+            // we acn return 200 ok contain updated resource representation  in response body or 204 no content
+            return NoContent();
+        }
+
     }
 }

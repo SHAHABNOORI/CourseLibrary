@@ -52,8 +52,7 @@ namespace CourseLibrary.API.Services
                 throw new ArgumentNullException(nameof(courseId));
             }
 
-            return _context.Courses
-              .Where(c => c.AuthorId == authorId && c.Id == courseId).FirstOrDefault();
+            return _context.Courses.FirstOrDefault(c => c.AuthorId == authorId && c.Id == courseId);
         }
 
 
